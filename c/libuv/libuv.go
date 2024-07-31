@@ -26,40 +26,12 @@ type Handle struct {
 	*libuv.Handle
 }
 
-type Dir struct {
-	*libuv.Dir
-}
-
 type Stream struct {
 	*libuv.Stream
 }
 
-type Pipe struct {
-	*libuv.Pipe
-}
-
 type Poll struct {
 	*libuv.Poll
-}
-
-type Prepare struct {
-	*libuv.Prepare
-}
-
-type Check struct {
-	*libuv.Check
-}
-
-type Idle struct {
-	*libuv.Idle
-}
-
-type Async struct {
-	*libuv.Async
-}
-
-type Process struct {
-	*libuv.Process
 }
 
 type Req struct {
@@ -89,8 +61,6 @@ type Connect struct {
 type Buf struct {
 	*libuv.Buf
 }
-
-type Buffer libuv.Buf
 
 type WalkCb func(handle *Handle, arg c.Pointer)
 
