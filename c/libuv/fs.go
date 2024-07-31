@@ -2,6 +2,7 @@ package libuv
 
 import (
 	"fmt"
+	"unsafe"
 
 	"github.com/goplus/llgo/c"
 	"github.com/goplus/llgo/c/libuv"
@@ -59,8 +60,6 @@ const (
 	DirentBlock   = libuv.DirentBlock
 )
 
-type File = libuv.File
-
 type Fs struct {
 	*libuv.Fs
 }
@@ -85,11 +84,20 @@ type FsCb func(req *Fs)
 type FsEventCb func(handle *FsEvent, filename *c.Char, events c.Int, status c.Int)
 type FsPollCb func(handle *FsPoll, status c.Int, events c.Int)
 
+//func convertFsCb(callback FsCb) func(*libuv.Fs) {
+//	fmt.Println("convertFsCbOut")
+//	return func(libuvFs *libuv.Fs) {
+//		fmt.Println("Converted callback is being called")
+//		fs := Fs{Fs: libuvFs}
+//		callback(&fs)
+//	}
+//}
+
 func convertFsCb(callback FsCb) func(*libuv.Fs) {
 	fmt.Println("convertFsCbOut")
 	return func(libuvFs *libuv.Fs) {
 		fmt.Println("Converted callback is being called")
-		fs := &Fs{Fs: libuvFs}
+		fs := (*Fs)(unsafe.Pointer(libuvFs))
 		callback(fs)
 	}
 }
@@ -110,7 +118,7 @@ func convertFsPollCb(callback FsPollCb) func(*libuv.FsPoll, c.Int, c.Int) {
 }
 
 func NewFs() Fs {
-	var newFs libuv.Fs
+	newFs := libuv.Fs{}
 	return Fs{Fs: &newFs}
 }
 
@@ -151,27 +159,32 @@ func (f *Fs) Cleanup() {
 }
 
 // Open opens a file specified by the path with given flags and mode, and returns a file descriptor.
-func (f *Fs) Open(loop Loop, path string, flags int, mode int, cb FsCb) int {
-	//c.Printf(c.Str("Loop size: %d"), loop.Size())
-	//c.Printf(c.Str("Fs size: %d"), f.Size())
-	fmt.Println("Loop size: ", loop.Size())
-	fmt.Println("Fs path: ", f.GetPath())
+func (f *Fs) Open(loop *Loop, path string, flags int, mode int, cb FsCb) int {
+	fmt.Println("Open")
+	fmt.Printf("Loop size: %d\n", loop.Size())
+	fmt.Printf("Fs result: %d\n", f.GetResult())
 	return int(libuv.FsOpen(loop.Loop, f.Fs, c.AllocaCStr(path), c.Int(flags), c.Int(mode), convertFsCb(cb)))
 }
 
 // Close closes a file descriptor.
-func (f *Fs) Close(loop Loop, file int, cb FsCb) int {
-	return int(libuv.FsClose(loop.Loop, f.Fs, File(file), convertFsCb(cb)))
+func (f *Fs) Close(loop *Loop, file int, cb FsCb) int {
+	fmt.Println("Close")
+	fmt.Printf("Loop size: %d\n", loop.Size())
+	fmt.Printf("Fs result: %d\n", f.GetResult())
+	return int(libuv.FsClose(loop.Loop, f.Fs, libuv.File(file), convertFsCb(cb)))
 }
 
 // Read reads data from a file descriptor into a buffer at a specified offset.
-func (f *Fs) Read(loop Loop, file int, bufs Buf, nbufs c.Uint, offset int64, cb FsCb) int {
-	return int(libuv.FsRead(loop.Loop, f.Fs, File(file), bufs.Buf, nbufs, c.LongLong(offset), convertFsCb(cb)))
+func (f *Fs) Read(loop *Loop, file int, bufs Buf, nbufs c.Uint, offset int64, cb FsCb) int {
+	fmt.Println("Read")
+	fmt.Printf("Loop size: %d\n", loop.Size())
+	fmt.Printf("Fs result: %d\n", f.GetResult())
+	return int(libuv.FsRead(loop.Loop, f.Fs, libuv.File(file), bufs.Buf, nbufs, c.LongLong(offset), convertFsCb(cb)))
 }
 
 // Write writes data to a file descriptor from a buffer at a specified offset.
 func (f *Fs) Write(loop *Loop, file int, bufs Buf, nbufs c.Uint, offset int64, cb FsCb) int {
-	return int(libuv.FsWrite(loop.Loop, f.Fs, File(file), bufs.Buf, nbufs, c.LongLong(offset), convertFsCb(cb)))
+	return int(libuv.FsWrite(loop.Loop, f.Fs, libuv.File(file), bufs.Buf, nbufs, c.LongLong(offset), convertFsCb(cb)))
 }
 
 // Unlink deletes a file specified by the path.
@@ -206,7 +219,7 @@ func (f *Fs) Stat(loop *Loop, path string, cb FsCb) int {
 
 // Fstat retrieves status information about a file descriptor.
 func (f *Fs) Fstat(loop *Loop, file int, cb FsCb) int {
-	return int(libuv.FsFstat(loop.Loop, f.Fs, File(file), convertFsCb(cb)))
+	return int(libuv.FsFstat(loop.Loop, f.Fs, libuv.File(file), convertFsCb(cb)))
 }
 
 // Rename renames a file from the old path to the new path.
@@ -216,17 +229,17 @@ func (f *Fs) Rename(loop *Loop, path string, newPath string, cb FsCb) int {
 
 // Fsync synchronizes a file descriptor's state with storage device.
 func (f *Fs) Fsync(loop *Loop, file int, cb FsCb) int {
-	return int(libuv.FsFsync(loop.Loop, f.Fs, File(file), convertFsCb(cb)))
+	return int(libuv.FsFsync(loop.Loop, f.Fs, libuv.File(file), convertFsCb(cb)))
 }
 
 // Fdatasync synchronizes a file descriptor's data with storage device.
 func (f *Fs) Fdatasync(loop *Loop, file int, cb FsCb) int {
-	return int(libuv.FsFdatasync(loop.Loop, f.Fs, File(file), convertFsCb(cb)))
+	return int(libuv.FsFdatasync(loop.Loop, f.Fs, libuv.File(file), convertFsCb(cb)))
 }
 
 // Ftruncate truncates a file to a specified length.
 func (f *Fs) Ftruncate(loop *Loop, file int, offset int64, cb FsCb) int {
-	return int(libuv.FsFtruncate(loop.Loop, f.Fs, File(file), c.LongLong(offset), convertFsCb(cb)))
+	return int(libuv.FsFtruncate(loop.Loop, f.Fs, libuv.File(file), c.LongLong(offset), convertFsCb(cb)))
 }
 
 // Sendfile sends data from one file descriptor to another.
@@ -246,7 +259,7 @@ func (f *Fs) Chmod(loop *Loop, path string, mode int, cb FsCb) int {
 
 // Fchmod changes the permissions of a file descriptor.
 func (f *Fs) Fchmod(loop *Loop, file int, mode int, cb FsCb) int {
-	return int(libuv.FsFchmod(loop.Loop, f.Fs, File(file), c.Int(mode), convertFsCb(cb)))
+	return int(libuv.FsFchmod(loop.Loop, f.Fs, libuv.File(file), c.Int(mode), convertFsCb(cb)))
 }
 
 // Utime updates the access and modification times of a file specified by the path.
@@ -256,7 +269,7 @@ func (f *Fs) Utime(loop *Loop, path string, atime int, mtime int, cb FsCb) int {
 
 // Futime updates the access and modification times of a file descriptor.
 func (f *Fs) Futime(loop *Loop, file int, atime int, mtime int, cb FsCb) int {
-	return int(libuv.FsFutime(loop.Loop, f.Fs, File(file), c.Int(atime), c.Int(mtime), convertFsCb(cb)))
+	return int(libuv.FsFutime(loop.Loop, f.Fs, libuv.File(file), c.Int(atime), c.Int(mtime), convertFsCb(cb)))
 }
 
 // Lutime updates the access and modification times of a file specified by the path, even if the path is a symbolic link.
@@ -321,7 +334,7 @@ func (f *Fs) Chown(loop *Loop, path string, uid int, gid int, cb FsCb) int {
 
 // Fchown Change file ownership by file descriptor
 func (f *Fs) Fchown(loop *Loop, file int, uid int, gid int, cb FsCb) int {
-	return int(libuv.FsFchown(loop.Loop, f.Fs, File(file), c.Int(uid), c.Int(gid), convertFsCb(cb)))
+	return int(libuv.FsFchown(loop.Loop, f.Fs, libuv.File(file), c.Int(uid), c.Int(gid), convertFsCb(cb)))
 }
 
 // Lchown Change file ownership (symlink)

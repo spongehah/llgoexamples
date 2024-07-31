@@ -72,8 +72,8 @@ func convertWalkCb(callback WalkCb) func(handle *libuv.Handle, arg c.Pointer) {
 }
 
 // DefaultLoop returns the default loop.
-func DefaultLoop() *libuv.Loop {
-	return libuv.LoopDefault()
+func DefaultLoop() *Loop {
+	return &Loop{Loop: libuv.DefaultLoop()}
 }
 
 // Size returns the size of the loop.
