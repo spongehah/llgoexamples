@@ -24,6 +24,7 @@ type Loop struct {
 
 type Handle struct {
 	*libuv.Handle
+	WalkCb WalkCb
 }
 
 type Stream struct {
@@ -63,13 +64,6 @@ type Buf struct {
 }
 
 type WalkCb func(handle *Handle, arg c.Pointer)
-
-func convertWalkCb(callback WalkCb) func(handle *libuv.Handle, arg c.Pointer) {
-	return func(handle *libuv.Handle, arg c.Pointer) {
-		hand := &Handle{Handle: handle}
-		callback(hand, arg)
-	}
-}
 
 // DefaultLoop returns the default loop.
 func DefaultLoop() *Loop {
@@ -129,7 +123,10 @@ func (l *Loop) Configure(loop *Loop, option libuv.LoopOption, arg int) int {
 
 // Walk walks the loop.
 func (l *Loop) Walk(walkCb WalkCb, arg c.Pointer) {
-	libuv.LoopWalk(l.Loop, convertWalkCb(walkCb), arg)
+	libuv.LoopWalk(l.Loop, func(_handle *libuv.Handle, arg c.Pointer) {
+		handle := (*Handle)(unsafe.Pointer(_handle))
+		handle.WalkCb(handle, arg)
+	}, arg)
 }
 
 // Fork forks the loop.
